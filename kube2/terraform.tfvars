@@ -1,7 +1,7 @@
 // Project
 project_id       = "stalwart-camera-276219"
 credentials_file = "stalwart-camera-276219-ae83b60715a2.json"
-demo_bucket   = "demo"
+demo_bucket   = "demo-stuff-wtf"
 database = "demodb"
 
 //Cluster
