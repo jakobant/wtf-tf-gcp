@@ -16,6 +16,10 @@ variable "database" {
   description = "Database name"
 }
 
+variable "database_prefix" {
+  description = "Database name prefix"
+}
+
 // kube
 variable "cluster_name" {
   description = "The name for the GKE cluster"

@@ -1,5 +1,6 @@
 terraform {
 }
+provider "random" {}
 
 //Dns topics scans
 resource "google_pubsub_topic" "topic-scan-dns" {
@@ -99,28 +100,41 @@ locals {
   onprem = ["153.92.146.175/32", "178.19.58.137/32"]
 }
 
-data "google_compute_network" "demo_network" {
-  name = var.network
+resource "random_id" "id" {
+  byte_length = 4
+  prefix      = "${var.database_prefix}-"
+}
+
+data "google_compute_network" "demo-network" {
+  name = "default"
   project = var.project_id
 }
 
 resource "google_compute_global_address" "private_ip_address" {
-  provider = google-beta
   project = var.project_id
   name          = "private-ip-address"
   purpose       = "VPC_PEERING"
   address_type  = "INTERNAL"
   prefix_length = 16
-  network       = data.google_compute_network.demo_network.self_link
+  network       = data.google_compute_network.demo-network.self_link
+}
+
+resource "google_service_networking_connection" "private_vpc_connection" {
+  depends_on = [data.google_compute_network.demo-network]
+  network                 = data.google_compute_network.demo-network.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
 }
 
 
+
+
 resource "google_sql_database_instance" "demodb" {
-  name             = var.database
+  name             = random_id.id.hex
   database_version = "POSTGRES_12"
   region           = var.region
   project          = var.project_id
-
+  depends_on = [google_service_networking_connection.private_vpc_connection]
   settings {
     # Second-generation instance tiers are based on the machine
     # type. See argument reference below.
@@ -128,7 +142,7 @@ resource "google_sql_database_instance" "demodb" {
     availability_type = "ZONAL"
     ip_configuration {
       ipv4_enabled    = true
-      private_network = data.google_compute_network.demo_network.self_link
+      private_network = data.google_compute_network.demo-network.self_link
       dynamic "authorized_networks" {
         for_each = local.onprem
         iterator = onprem
